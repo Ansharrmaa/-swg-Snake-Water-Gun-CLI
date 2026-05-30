@@ -7,6 +7,7 @@ setup(
     author="Ansh Sharma",
     python_requires=">=3.8",
     packages=find_packages(),
+    install_requires=["boto3"],
     entry_points={
         "console_scripts": [
             "swg=swg.cli:main",

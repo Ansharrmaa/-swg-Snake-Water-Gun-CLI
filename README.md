@@ -4,7 +4,7 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A command-line **Snake Water Gun** game built in Python — play against the computer, track your stats with SQLite, and review your match history. Comes with a full test suite and GitHub Actions CI.
+A command-line **Snake Water Gun** game built in Python — play against the computer, track your stats with SQLite, review your match history, and **manage AWS cloud resources**. Comes with a full test suite, GitHub Actions CI, and a stunning, responsive **Web UI Game client** with retro synthesized Audio, predictive AI, and multiple match formats!
 
 ---
 
@@ -96,27 +96,77 @@ swg history --name ansh --limit 5
 swg reset --name ansh
 ```
 
+### ☁️ Cloud — List S3 buckets
+
+```bash
+swg cloud s3
+```
+
+```
+Bucket            Created
+────────────────  ────────────────────
+my-data-bucket    2025-01-15 10:30 UTC
+my-logs-bucket    2025-03-20 08:00 UTC
+
+2 bucket(s) total.
+```
+
+### ☁️ Cloud — List EC2 instances
+
+```bash
+swg cloud ec2 --region us-west-2
+```
+
+```
+Instance ID        Type       State      Name
+─────────────────  ─────────  ─────────  ──────────
+i-0abc123def456    t3.micro   ● running  web-server
+i-0xyz789ghi012    m5.large   ○ stopped
+
+2 instance(s) in us-west-2.
+```
+
+> **Note:** Requires AWS credentials configured via environment variables, `~/.aws/credentials`, or an IAM role. The CLI never stores or prompts for credentials.
+
+### 🎮 Web UI Game client
+
+You can also play a beautiful, premium, responsive browser version of the game:
+
+1. Locate the `web/` directory in the cloned repository.
+2. Open **[web/index.html](file:///c:/Users/ansh8/Downloads/swg_cli_project/swg_cli/web/index.html)** in any modern web browser.
+3. Enjoy an immersive, arcade-style gaming client!
+
+**Web UI Features:**
+- **🎵 Retro Synth SFX**: High-quality game sounds generated dynamically in real time via the browser's **Web Audio API** (no asset loading needed!). Toggable with standard preferences saved in localStorage.
+- **⚔️ Game Modes**: Switch between **Free Play (∞)** and match series like **Best of 3 (Bo3)**, **Best of 5 (Bo5)**, or **Best of 7 (Bo7)**.
+- **⏱️ Action Timer**: Tension-building 5s countdown timer with warning ticks for competitive series rounds. Auto-picks a card on time-out.
+- **🧠 Adaptive CPU AI**: Features a predictive algorithm that tracks your transition patterns and counters your predicted choices.
+- **📊 Lifetime Stats**: View your overall stats dashboard (win rate, best streak, and favorite pick) kept persistent through `localStorage`.
+
 ---
 
 ## 📋 Commands & Options
 
 ### Commands
 
-| Command        | Description                     |
-|----------------|---------------------------------|
-| `swg play`     | Start a new game session        |
-| `swg stats`    | View win/loss/draw statistics   |
-| `swg history`  | View recent match history       |
-| `swg reset`    | Delete all saved stats          |
+| Command          | Description                              |
+|------------------|------------------------------------------|
+| `swg play`       | Start a new game session                 |
+| `swg stats`      | View win/loss/draw statistics            |
+| `swg history`    | View recent match history                |
+| `swg reset`      | Delete all saved stats                   |
+| `swg cloud s3`   | List S3 buckets in your AWS account      |
+| `swg cloud ec2`  | List EC2 instances in a region           |
 
 ### Options
 
-| Flag       | Default  | Applies to        | Description                        |
-|------------|----------|--------------------|------------------------------------|
-| `--name`   | `player` | all commands       | Your player name                   |
-| `--rounds` | `3`      | `play`             | Number of rounds per session       |
-| `--limit`  | `10`     | `history`          | Number of rounds to display        |
-| `--auto`   | —        | `play`             | Auto-pick `s`, `w`, or `g` (testing) |
+| Flag       | Default      | Applies to        | Description                        |
+|------------|--------------|--------------------|------------------------------------|
+| `--name`   | `player`     | game commands      | Your player name                   |
+| `--rounds` | `3`          | `play`             | Number of rounds per session       |
+| `--limit`  | `10`         | `history`          | Number of rounds to display        |
+| `--auto`   | —            | `play`             | Auto-pick `s`, `w`, or `g` (testing) |
+| `--region` | `us-east-1`  | `cloud ec2`        | AWS region to query                |
 
 ---
 
@@ -142,10 +192,15 @@ project-1-game-/
 ├── swg/
 │   ├── __init__.py          # Package version
 │   ├── cli.py               # argparse entry point & session logic
+│   ├── cloud.py             # AWS cloud commands (S3, EC2 via boto3)
 │   ├── game.py              # Core game logic (choices, win map)
 │   └── scores.py            # SQLite persistence layer
 ├── tests/
-│   └── test_swg.py          # 19 pytest unit tests
+│   └── test_swg.py          # 27 pytest unit tests
+├── web/
+│   ├── index.html           # Web game dashboard interface
+│   ├── style.css            # Premium layout with glassmorphic styles
+│   └── game.js              # Synthesized audio, AI, timer, and state
 ├── .gitignore
 ├── setup.py                 # Package configuration
 └── README.md
@@ -153,11 +208,13 @@ project-1-game-/
 
 ### Architecture
 
-| Module       | Responsibility                                                    |
+| Module / Dir | Responsibility                                                    |
 |--------------|-------------------------------------------------------------------|
 | `cli.py`     | Parses arguments, runs game sessions, displays stats and history  |
+| `cloud.py`   | Lists S3 buckets and EC2 instances via boto3, formatted output    |
 | `game.py`    | Defines choices, win conditions, computer random pick             |
 | `scores.py`  | SQLite database init, save results, query stats/history, reset    |
+| `web/`       | Responsive browser game client with synthesizer sounds and stats  |
 
 Scores are stored in `~/.swg_scores.db` — a local SQLite database in your home directory. Each player's data is isolated by name.
 
@@ -170,7 +227,7 @@ pip install pytest
 pytest tests/ -v
 ```
 
-**19 tests** covering:
+**27 tests** covering:
 - ✅ All 9 win/lose/draw combinations
 - ✅ Computer always picks a valid choice
 - ✅ Choice formatting (including unknown keys)

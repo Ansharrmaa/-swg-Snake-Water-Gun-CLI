@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Snake Water Gun — The Game</title>
+  <meta name="description" content="A beautifully animated Snake Water Gun game. Play against the computer with stunning visuals." />
+  <meta name="theme-color" content="#0a0e1a" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Animated background particles -->
+  <canvas id="particles"></canvas>
+
+  <!-- Main app -->
+  <div class="app" id="app">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <span class="logo-icon">⚔️</span>
+        <h1>Snake Water Gun</h1>
+      </div>
+      <p class="tagline">Choose wisely. Strike fast.</p>
+    </header>
+
+    <!-- Top toolbar -->
+    <div class="toolbar">
+      <div class="mode-selector glass" id="mode-selector">
+        <button class="mode-btn active" data-mode="free">∞ Free Play</button>
+        <button class="mode-btn" data-mode="bo3">Bo3</button>
+        <button class="mode-btn" data-mode="bo5">Bo5</button>
+        <button class="mode-btn" data-mode="bo7">Bo7</button>
+        <div class="mode-indicator" id="mode-indicator"></div>
+      </div>
+      <div class="toolbar-actions">
+        <button class="icon-btn glass" id="sound-toggle" title="Toggle Sound" aria-label="Toggle Sound">
+          🔊
+        </button>
+        <button class="icon-btn glass" id="stats-toggle" title="View Stats" aria-label="View Stats">
+          📊
+        </button>
+        <button class="icon-btn glass" id="reset-btn" title="Reset Game" aria-label="Reset Game">
+          🔄
+        </button>
+      </div>
+    </div>
+
+    <!-- Scoreboard -->
+    <div class="scoreboard glass">
+      <div class="score-item you">
+        <span class="score-label">YOU</span>
+        <span class="score-value" id="score-you">0</span>
+        <div class="score-pips" id="pips-you"></div>
+      </div>
+      <div class="score-divider">
+        <span class="round-badge" id="round-badge">Round 1</span>
+        <div class="divider-line"></div>
+        <span class="streak-text" id="streak-text"></span>
+      </div>
+      <div class="score-item cpu">
+        <span class="score-label">CPU</span>
+        <span class="score-value" id="score-cpu">0</span>
+        <div class="score-pips" id="pips-cpu"></div>
+      </div>
+    </div>
+
+    <!-- Timer bar -->
+    <div class="timer-bar-container glass" id="timer-container" style="display:none;">
+      <div class="timer-bar" id="timer-bar"></div>
+      <span class="timer-label" id="timer-label">5s</span>
+    </div>
+
+    <!-- Battle Arena -->
+    <div class="arena" id="arena">
+      <div class="arena-side player-side">
+        <div class="arena-card glass" id="player-card">
+          <span class="arena-emoji" id="player-emoji">❓</span>
+          <span class="arena-name">You</span>
+        </div>
+      </div>
+      <div class="vs-container">
+        <div class="vs-badge" id="vs-badge">VS</div>
+      </div>
+      <div class="arena-side cpu-side">
+        <div class="arena-card glass" id="cpu-card">
+          <span class="arena-emoji" id="cpu-emoji">❓</span>
+          <span class="arena-name">CPU</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Result banner -->
+    <div class="result-banner" id="result-banner">
+      <span class="result-text" id="result-text"></span>
+      <span class="result-sub" id="result-sub"></span>
+    </div>
+
+    <!-- Choice cards -->
+    <div class="choices" id="choices">
+      <button class="choice-card glass" data-choice="snake" id="btn-snake">
+        <div class="choice-glow"></div>
+        <span class="choice-emoji">🐍</span>
+        <span class="choice-name">Snake</span>
+        <span class="choice-hint">Beats Gun</span>
+        <span class="choice-key">S</span>
+      </button>
+      <button class="choice-card glass" data-choice="water" id="btn-water">
+        <div class="choice-glow"></div>
+        <span class="choice-emoji">💧</span>
+        <span class="choice-name">Water</span>
+        <span class="choice-hint">Beats Snake</span>
+        <span class="choice-key">W</span>
+      </button>
+      <button class="choice-card glass" data-choice="gun" id="btn-gun">
+        <div class="choice-glow"></div>
+        <span class="choice-emoji">🔫</span>
+        <span class="choice-name">Gun</span>
+        <span class="choice-hint">Beats Water</span>
+        <span class="choice-key">G</span>
+      </button>
+    </div>
+
+    <!-- Play again -->
+    <button class="play-again-btn glass" id="play-again" style="display: none;">
+      Next Round →
+    </button>
+
+    <!-- Match Winner Overlay -->
+    <div class="match-winner-overlay" id="match-overlay" style="display:none;">
+      <div class="match-winner-card glass">
+        <span class="winner-trophy" id="winner-trophy">🏆</span>
+        <h2 class="winner-title" id="winner-title">You Win the Match!</h2>
+        <p class="winner-score" id="winner-score">3 – 1</p>
+        <button class="play-again-btn glass" id="new-match-btn">New Match →</button>
+      </div>
+    </div>
+
+    <!-- Stats Panel -->
+    <div class="stats-overlay" id="stats-overlay" style="display:none;">
+      <div class="stats-panel glass">
+        <div class="stats-header">
+          <h2>📊 Your Stats</h2>
+          <button class="icon-btn" id="stats-close" aria-label="Close Stats">✕</button>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card glass">
+            <span class="stat-number" id="stat-total">0</span>
+            <span class="stat-label">Total Rounds</span>
+          </div>
+          <div class="stat-card glass">
+            <span class="stat-number accent-green" id="stat-wins">0</span>
+            <span class="stat-label">Wins</span>
+          </div>
+          <div class="stat-card glass">
+            <span class="stat-number accent-red" id="stat-losses">0</span>
+            <span class="stat-label">Losses</span>
+          </div>
+          <div class="stat-card glass">
+            <span class="stat-number accent-yellow" id="stat-draws">0</span>
+            <span class="stat-label">Draws</span>
+          </div>
+        </div>
+        <div class="stats-extras">
+          <div class="stat-row">
+            <span>Win Rate</span>
+            <div class="win-rate-bar">
+              <div class="win-rate-fill" id="win-rate-fill"></div>
+            </div>
+            <span class="stat-pct" id="stat-winrate">0%</span>
+          </div>
+          <div class="stat-row">
+            <span>Best Streak</span>
+            <span class="stat-highlight" id="stat-best-streak">0 🔥</span>
+          </div>
+          <div class="stat-row">
+            <span>Favourite Pick</span>
+            <span class="stat-highlight" id="stat-fav-pick">—</span>
+          </div>
+        </div>
+        <button class="reset-stats-btn glass" id="reset-stats-btn">🗑️ Reset All Stats</button>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="history glass" id="history" style="display: none;">
+      <h3>Match History</h3>
+      <div class="history-list" id="history-list"></div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>Built with ❤️ by <strong>Ansh Sharma</strong> &middot; <code>swg</code> CLI &middot; Press <kbd>S</kbd> <kbd>W</kbd> <kbd>G</kbd> to play</p>
+    </footer>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

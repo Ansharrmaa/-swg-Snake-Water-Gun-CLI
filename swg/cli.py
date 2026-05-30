@@ -1,5 +1,5 @@
 """
-swg — Snake Water Gun CLI game
+swg — Snake Water Gun CLI game + cloud toolkit
 """
 
 import argparse
@@ -7,6 +7,7 @@ import sys
 
 from swg.game import get_computer_choice, determine_result, format_choice, CHOICES
 from swg.scores import init_db, save_result, get_stats, get_history, reset_stats
+from swg.cloud import list_s3_buckets, list_ec2_instances
 
 
 def play_session(player_name: str, rounds: int, auto: str = None):
@@ -94,10 +95,22 @@ def cmd_reset(args):
         print("Cancelled.")
 
 
+# ── cloud handlers ────────────────────────────────────────────────────────────
+
+def cmd_cloud_s3(args):
+    list_s3_buckets()
+
+
+def cmd_cloud_ec2(args):
+    list_ec2_instances(args.region)
+
+
+# ── parser ────────────────────────────────────────────────────────────────────
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="swg",
-        description="Snake Water Gun — a CLI game with persistent score tracking."
+        description="Snake Water Gun — CLI game + cloud toolkit."
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -126,6 +139,23 @@ def build_parser() -> argparse.ArgumentParser:
     p_reset = sub.add_parser("reset", help="Reset your stats")
     p_reset.add_argument("--name", default="player", help="Player name")
     p_reset.set_defaults(func=cmd_reset)
+
+    # cloud
+    p_cloud = sub.add_parser(
+        "cloud",
+        help="AWS cloud commands (list S3 buckets, EC2 instances)"
+    )
+    cloud_sub = p_cloud.add_subparsers(dest="cloud_command", required=True)
+
+    # cloud s3
+    p_s3 = cloud_sub.add_parser("s3", help="List S3 buckets")
+    p_s3.set_defaults(func=cmd_cloud_s3)
+
+    # cloud ec2
+    p_ec2 = cloud_sub.add_parser("ec2", help="List EC2 instances")
+    p_ec2.add_argument("--region", default="us-east-1",
+                       help="AWS region (default: us-east-1)")
+    p_ec2.set_defaults(func=cmd_cloud_ec2)
 
     return parser
 

@@ -107,3 +107,144 @@ class TestScores:
         save_result("other", "lose", "w", "s", tmp_db)
         assert get_stats("ansh", tmp_db)["total"] == 1
         assert get_stats("other", tmp_db)["total"] == 1
+
+
+# ── cloud tests (all mocked — no real AWS calls) ─────────────────────────────
+
+from unittest.mock import patch, MagicMock
+from datetime import datetime, timezone
+
+
+class TestCloudS3:
+    @patch("swg.cloud.boto3")
+    def test_list_s3_buckets(self, mock_boto3, capsys):
+        mock_client = MagicMock()
+        mock_boto3.client.return_value = mock_client
+        mock_client.list_buckets.return_value = {
+            "Buckets": [
+                {
+                    "Name": "my-data-bucket",
+                    "CreationDate": datetime(2025, 1, 15, 10, 30, tzinfo=timezone.utc),
+                },
+                {
+                    "Name": "my-logs-bucket",
+                    "CreationDate": datetime(2025, 3, 20, 8, 0, tzinfo=timezone.utc),
+                },
+            ]
+        }
+
+        from swg.cloud import list_s3_buckets
+        results = list_s3_buckets()
+
+        assert len(results) == 2
+        assert results[0]["name"] == "my-data-bucket"
+        assert results[1]["name"] == "my-logs-bucket"
+        mock_boto3.client.assert_called_once_with("s3")
+
+        output = capsys.readouterr().out
+        assert "my-data-bucket" in output
+        assert "2 bucket(s) total" in output
+
+    @patch("swg.cloud.boto3")
+    def test_list_s3_empty(self, mock_boto3, capsys):
+        mock_client = MagicMock()
+        mock_boto3.client.return_value = mock_client
+        mock_client.list_buckets.return_value = {"Buckets": []}
+
+        from swg.cloud import list_s3_buckets
+        results = list_s3_buckets()
+
+        assert results == []
+        output = capsys.readouterr().out
+        assert "No S3 buckets found" in output
+
+    @patch("swg.cloud.boto3")
+    def test_s3_no_credentials(self, mock_boto3):
+        mock_client = MagicMock()
+        mock_boto3.client.return_value = mock_client
+        mock_boto3.exceptions.Boto3Error = Exception
+
+        from botocore.exceptions import NoCredentialsError
+        mock_client.list_buckets.side_effect = NoCredentialsError()
+
+        from swg.cloud import list_s3_buckets
+        with pytest.raises(SystemExit):
+            list_s3_buckets()
+
+
+class TestCloudEC2:
+    @patch("swg.cloud.boto3")
+    def test_list_ec2_instances(self, mock_boto3, capsys):
+        mock_client = MagicMock()
+        mock_boto3.client.return_value = mock_client
+        mock_client.describe_instances.return_value = {
+            "Reservations": [
+                {
+                    "Instances": [
+                        {
+                            "InstanceId": "i-0abc123def456",
+                            "InstanceType": "t3.micro",
+                            "State": {"Name": "running"},
+                            "Tags": [{"Key": "Name", "Value": "web-server"}],
+                        },
+                        {
+                            "InstanceId": "i-0xyz789ghi012",
+                            "InstanceType": "m5.large",
+                            "State": {"Name": "stopped"},
+                            "Tags": [],
+                        },
+                    ]
+                }
+            ]
+        }
+
+        from swg.cloud import list_ec2_instances
+        results = list_ec2_instances("us-west-2")
+
+        assert len(results) == 2
+        assert results[0]["instance_id"] == "i-0abc123def456"
+        assert results[0]["state"] == "running"
+        assert results[0]["name"] == "web-server"
+        assert results[1]["name"] == ""
+        mock_boto3.client.assert_called_once_with("ec2", region_name="us-west-2")
+
+        output = capsys.readouterr().out
+        assert "web-server" in output
+        assert "2 instance(s)" in output
+
+    @patch("swg.cloud.boto3")
+    def test_list_ec2_empty(self, mock_boto3, capsys):
+        mock_client = MagicMock()
+        mock_boto3.client.return_value = mock_client
+        mock_client.describe_instances.return_value = {"Reservations": []}
+
+        from swg.cloud import list_ec2_instances
+        results = list_ec2_instances("eu-west-1")
+
+        assert results == []
+        output = capsys.readouterr().out
+        assert "No EC2 instances found" in output
+
+
+class TestCloudSubparser:
+    def test_cloud_s3_parses(self):
+        from swg.cli import build_parser
+        parser = build_parser()
+        args = parser.parse_args(["cloud", "s3"])
+        assert args.command == "cloud"
+        assert args.cloud_command == "s3"
+
+    def test_cloud_ec2_parses(self):
+        from swg.cli import build_parser
+        parser = build_parser()
+        args = parser.parse_args(["cloud", "ec2", "--region", "ap-south-1"])
+        assert args.command == "cloud"
+        assert args.cloud_command == "ec2"
+        assert args.region == "ap-south-1"
+
+    def test_cloud_ec2_default_region(self):
+        from swg.cli import build_parser
+        parser = build_parser()
+        args = parser.parse_args(["cloud", "ec2"])
+        assert args.region == "us-east-1"
+
